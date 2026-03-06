@@ -1,0 +1,122 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { drivers, users, rides, admins } from "@shared/schema";
+import { eq, and, or, desc, sql, ne } from "drizzle-orm";
+import { db } from "./db";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import path from "path";
+import fs from "fs";
+
+function isDriverProfileComplete(driver: any): boolean {
+  return !!(
+    driver.firstName &&
+    driver.lastName &&
+    driver.phone &&
+    driver.vehiclePlate &&
+    driver.vehicleModel &&
+    driver.vehicleColor &&
+    Array.isArray(driver.languages) && driver.languages.length > 0 &&
+    driver.photoVerifiedAt &&
+    driver.phoneVerifiedAt &&
+    driver.termsAcceptedAt
+  );
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express
+): Promise<Server> {
+  
+  if (process.env.REPLIT === "true" || process.env.REPL_ID) {
+    await setupAuth(app);
+    registerAuthRoutes(app);
+  }
+
+  registerObjectStorageRoutes(app);
+  const objectStorageService = new ObjectStorageService();
+
+  const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adminId = (req.session as any).adminId;
+      if (!adminId) return res.status(401).json({ error: "Unauthorized" });
+      const admin = await storage.getAdmin(adminId);
+      if (!admin) return res.status(401).json({ error: "Unauthorized" });
+      next();
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  app.post("/api/driver/upload-id-card", async (req, res) => {
+    try {
+      const driverId = (req.session as any)?.driverId;
+      if (!driverId) return res.status(401).json({ error: "Unauthorized" });
+      const { imageUrl } = req.body;
+      if (!imageUrl) return res.status(400).json({ error: "No image URL provided" });
+      await db.update(drivers).set({
+        idCardImageUrl: imageUrl,
+        verificationStatus: "pending_verification"
+      }).where(eq(drivers.id, driverId));
+      res.json({ success: true, message: "Dokument przesłany do weryfikacji" });
+    } catch (error) {
+      console.error("ID upload error:", error);
+      res.status(500).json({ error: "Błąd podczas przesyłania dokumentu" });
+    }
+  });
+
+  app.get("/api/admin/verification-queue", requireAdmin, async (req, res) => {
+    try {
+      const pendingDrivers = await db.select().from(drivers).where(
+        or(
+          eq(drivers.verificationStatus, "pending_verification"),
+          eq(drivers.verificationStatus, "approved"),
+          eq(drivers.verificationStatus, "rejected")
+        )
+      );
+      res.json(pendingDrivers);
+    } catch (error) {
+      console.error("Error fetching verification queue:", error);
+      res.status(500).json({ error: "Nie udało się pobrać kolejki" });
+    }
+  });
+
+  app.post("/api/admin/verify-driver/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { action } = req.body;
+      const status = action === "approve" ? "approved" : "rejected";
+      await db.update(drivers).set({
+        verificationStatus: status,
+        verifiedAt: new Date(),
+      }).where(eq(drivers.id, id));
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error("Verification error:", error);
+      res.status(500).json({ error: "Błąd podczas weryfikacji" });
+    }
+  });
+
+  app.get("/api/verify/:taxiqId", async (req, res) => {
+    try {
+      const driver = await storage.getDriverByTaxiqId(req.params.taxiqId);
+      if (!driver) return res.status(404).json({ error: "Kierowca nie znaleziony", verified: false });
+      const isVerifiedAndActive = driver.verificationStatus === "approved" && driver.isActive;
+      res.json({
+        taxiqId: driver.taxiqId,
+        firstName: driver.firstName,
+        extractedPhotoUrl: driver.extractedPhotoUrl,
+        verificationStatus: driver.verificationStatus,
+        isActive: driver.isActive,
+        verified: isVerifiedAndActive,
+        message: isVerifiedAndActive ? "Kierowca zweryfikowany i aktywny" : "Kierowca nieaktywny lub niezweryfikowany",
+      });
+    } catch (error) {
+      console.error("Error in public verify endpoint:", error);
+      res.status(500).json({ error: "Błąd weryfikacji" });
+    }
+  });
+
+  return httpServer;
+}

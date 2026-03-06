@@ -1,0 +1,69 @@
+modules = ["web", "nodejs-22", "postgresql-16", "javascript"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["jdk11", "android-tools", "jdk17", "unzip", "python311", "zip", "imagemagick", "expect", "gradle"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3001
+
+[[ports]]
+localPort = 5099
+externalPort = 3002
+
+[[ports]]
+localPort = 5555
+externalPort = 3000
+
+
+[env]
+PORT = "5000"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[agent]
+integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:2.0.0", "javascript_object_storage:2.0.0", "github:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BFMQSy9Mv77dLjF9M2SV9XxOd4gGU0aGvBThJ8jv7D_h9lLwiDGAWvowjHHjbKgttyCHjrYlP5oQkuHJUvmnYD0"
+VAPID_PRIVATE_KEY = "lBsSTLjoKAiOdcHeQv5Ge4fmkj14Am9Zbqrqvcgi_IY"
+TWILIO_PHONE_NUMBER = "+48732125585"
+
+[userenv.production]
+NODE_ENV = "production"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-6d57db17-7d4a-40b5-8199-d6da2a5bdf29"

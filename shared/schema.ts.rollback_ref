@@ -1,0 +1,895 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, json, jsonb } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Session table for express-session (connect-pg-simple)
+// This table must exist for user authentication sessions
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+});
+
+// Users table (passengers)
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password"),
+  plainPassword: text("plain_password"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  homeAddress: text("home_address"),
+  homeLat: decimal("home_lat", { precision: 10, scale: 7 }),
+  homeLng: decimal("home_lng", { precision: 10, scale: 7 }),
+  photoUrl: text("photo_url"),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
+  termsVersion: text("terms_version"),
+  isOnline: boolean("is_online").default(false),
+  isBlocked: boolean("is_blocked").default(false),
+  blockedAt: timestamp("blocked_at"),
+  blockedReason: text("blocked_reason"),
+  referrerDriverId: varchar("referrer_driver_id"),
+  referralStatus: text("referral_status").default("pending"),
+  referralEligible: boolean("referral_eligible").default(false),
+  referralExpirationDate: timestamp("referral_expiration_date"),
+  otpCode: text("otp_code"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpAttempts: integer("otp_attempts").default(0),
+  pinHash: text("pin_hash"),
+  pinSetAt: timestamp("pin_set_at"),
+  pinAttempts: integer("pin_attempts").default(0),
+  pinLockedUntil: timestamp("pin_locked_until"),
+  isActive: boolean("is_active").default(true).notNull(),
+  deletedAt: timestamp("deleted_at"),
+  deactivationReason: text("deactivation_reason"),
+  deactivatedBy: text("deactivated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  homeAddress: true,
+  homeLat: true,
+  homeLng: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Password reset tokens table
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// Admin users table
+export const admins = pgTable("admins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  plainPassword: text("plain_password"),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone").unique(),
+  role: text("role").default("admin"),
+  pinHash: text("pin_hash"),
+  pinSetAt: timestamp("pin_set_at"),
+  otpHash: text("otp_hash"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpAttempts: integer("otp_attempts").default(0),
+  pinAttempts: integer("pin_attempts").default(0),
+  pinLockedUntil: timestamp("pin_locked_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAdminSchema = createInsertSchema(admins).pick({
+  username: true,
+  password: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+});
+
+export type InsertAdmin = z.infer<typeof insertAdminSchema>;
+export type Admin = typeof admins.$inferSelect;
+
+// Subscription status values
+export const subscriptionStatusValues = ["trial", "active", "suspended", "grace", "expired"] as const;
+export type SubscriptionStatus = typeof subscriptionStatusValues[number];
+
+// Supported language codes for drivers
+export const languageCodeValues = ["PL", "EN", "DE", "UA", "RU", "FR", "ES", "IT"] as const;
+export type LanguageCode = typeof languageCodeValues[number];
+
+// Schema for validating language updates
+export const updateLanguagesSchema = z.object({
+  languages: z.array(z.enum(languageCodeValues))
+});
+export type UpdateLanguages = z.infer<typeof updateLanguagesSchema>;
+
+// Schema for validating pricing updates
+export const updatePricingSchema = z.object({
+  baseFare: z.number().int().min(500).max(2000), // 5.00 - 20.00 PLN opłata startowa
+  rateDayCity: z.number().int().min(100).max(2000), // 1.00 - 20.00 PLN/km
+  rateDaySuburb: z.number().int().min(100).max(2000),
+  rateNightCity: z.number().int().min(100).max(2000),
+  rateNightSuburb: z.number().int().min(100).max(2000),
+  rateHolidayCity: z.number().int().min(100).max(2000), // Stawka świąteczna miejska
+  rateHolidaySuburb: z.number().int().min(100).max(2000), // Stawka świąteczna pozamiejska
+  rateCito: z.number().int().min(100).max(3000), // CITO może być droższe
+  rateWaitingPerMinute: z.number().int().min(50).max(500), // 0.50 - 5.00 PLN/min za oczekiwanie
+  suburbRadiusKm: z.number().int().min(5).max(50), // 5-50 km
+  discountPercent: z.number().int().min(0).max(50), // 0-50%
+});
+export type UpdatePricing = z.infer<typeof updatePricingSchema>;
+
+// Drivers table
+export const drivers = pgTable("drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password"),
+  plainPassword: text("plain_password"),
+  name: text("name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  vehiclePlate: text("vehicle_plate"), // Numer rejestracyjny (uzupełniany w etapie 2)
+  vehicleModel: text("vehicle_model"),
+  vehicleColor: text("vehicle_color"),
+  taxiLicenseNumber: text("taxi_license_number"), // Numer licencji taxi (unique partial index in DB where not null)
+  photoUrl: text("photo_url"), // URL zdjęcia kierowcy
+  verificationPhotoUrl: text("verification_photo_url"), // URL zdjęcia weryfikacyjnego (na żądanie admina)
+  photoVerifiedAt: timestamp("photo_verified_at"), // Kiedy admin zweryfikował zdjęcie
+  emailVerifiedAt: timestamp("email_verified_at"), // Kiedy email został zweryfikowany
+  phoneVerifiedAt: timestamp("phone_verified_at"), // Kiedy telefon został zweryfikowany
+  termsAcceptedAt: timestamp("terms_accepted_at"), // Kiedy zaakceptował regulamin kierowcy
+  profileCompleted: boolean("profile_completed").default(false), // Czy profil jest kompletny
+  languages: text("languages").array().default([]), // Array of language codes: pl, en, de, ua, ru, etc.
+  isOnline: boolean("is_online").default(false),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("5.00"),
+  totalRides: integer("total_rides").default(0),
+  totalEarnings: integer("total_earnings").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  // Pricing fields (in grosze - 1 PLN = 100 groszy)
+  baseFare: integer("base_fare").default(900), // Opłata startowa (9.00 PLN)
+  rateDayCity: integer("rate_day_city").default(350), // Stawka dzienna miejska (3.50 PLN/km)
+  rateDaySuburb: integer("rate_day_suburb").default(450), // Stawka dzienna pozamiejska (4.50 PLN/km)
+  rateNightCity: integer("rate_night_city").default(450), // Stawka nocna miejska (4.50 PLN/km)
+  rateNightSuburb: integer("rate_night_suburb").default(550), // Stawka nocna pozamiejska (5.50 PLN/km)
+  rateHolidayCity: integer("rate_holiday_city").default(450), // Stawka świąteczna miejska (jak nocna)
+  rateHolidaySuburb: integer("rate_holiday_suburb").default(550), // Stawka świąteczna pozamiejska (jak nocna)
+  rateCito: integer("rate_cito").default(700), // Stawka CITO (7.00 PLN/km) - używane tylko do szacunków
+  rateWaitingPerMinute: integer("rate_waiting_per_minute").default(100), // Stawka za minutę oczekiwania/wolnej jazdy <15km/h (1.00 PLN/min)
+  suburbRadiusKm: integer("suburb_radius_km").default(15), // Promień stawki pozamiejskiej (km od centrum)
+  discountPercent: integer("discount_percent").default(0), // Rabat proponowany przez kierowcę (0-50%)
+  subscriptionDiscount: integer("subscription_discount").default(0), // Zniżka od admina na abonament (w groszach)
+  // Subscription fields
+  subscriptionStatus: text("subscription_status").default("trial"), // trial, active, suspended, grace, expired
+  trialEndsAt: timestamp("trial_ends_at"), // 1 month after registration
+  subscriptionEndsAt: timestamp("subscription_ends_at"), // Current subscription period end
+  suspendedAt: timestamp("suspended_at"), // When driver suspended their account
+  suspendedUntil: timestamp("suspended_until"), // Planned return date (min 7 days)
+  remainingDays: integer("remaining_days").default(0), // Days remaining when suspended
+  graceGrantedBy: varchar("grace_granted_by"), // Admin who granted grace period
+  graceReason: text("grace_reason"), // Reason for grace period (e.g., low earnings)
+  // Real-time location fields
+  currentLat: decimal("current_lat", { precision: 10, scale: 7 }), // Driver's current latitude
+  currentLng: decimal("current_lng", { precision: 10, scale: 7 }), // Driver's current longitude
+  lastLocationUpdate: timestamp("last_location_update"), // Last GPS update timestamp
+  // Block fields
+  isBlocked: boolean("is_blocked").default(false), // Czy konto jest zablokowane
+  blockedAt: timestamp("blocked_at"), // Kiedy zablokowano
+  blockedReason: text("blocked_reason"), // Powód blokady
+  // Assigned subscription plan (set by admin)
+  assignedPlanId: varchar("assigned_plan_id"), // Plan przydzielony przez admina
+  // Referral system fields
+  referralCode: text("referral_code").unique(), // Unikalny kod polecający (np. TQ-4821)
+  referralPoints: integer("referral_points").default(0), // Punkty za polecenia
+  referredDriversCount: integer("referred_drivers_count").default(0), // Liczba poleconych kierowców
+  referredPassengersCount: integer("referred_passengers_count").default(0), // Liczba poleconych pasażerów
+  // Bank account for referral payouts
+  bankAccountNumber: text("bank_account_number"), // Numer konta bankowego (IBAN)
+  bankAccountHolder: text("bank_account_holder"), // Imię i nazwisko właściciela konta
+  loyaltyBudget: integer("loyalty_budget").default(0), // Budżet lojalnościowy w groszach (np. 10000 = 100 PLN)
+  otpHash: text("otp_hash"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpAttempts: integer("otp_attempts").default(0),
+  pinHash: text("pin_hash"),
+  pinSetAt: timestamp("pin_set_at"),
+  pinAttempts: integer("pin_attempts").default(0),
+  pinLockedUntil: timestamp("pin_locked_until"),
+  isActive: boolean("is_active").default(true).notNull(),
+  deletedAt: timestamp("deleted_at"),
+  deactivationReason: text("deactivation_reason"),
+  deactivatedBy: text("deactivated_by"),
+  taxiqId: text("taxiq_id").unique().notNull(),
+  verificationStatus: text("verification_status").notNull().default("UNVERIFIED"),
+  idDocumentUrl: text("id_document_url"),
+  extractedPhotoUrl: text("extracted_photo_url"),
+  extractedFirstName: text("extracted_first_name"),
+  extractedLastName: text("extracted_last_name"),
+  extractedLicenseNumber: text("extracted_license_number"),
+  nameMatchScore: integer("name_match_score"),
+  verifiedAt: timestamp("verified_at"),
+  verifiedByAdminId: varchar("verified_by_admin_id"),
+  verificationNotes: text("verification_notes"),
+  documentQrData: text("document_qr_data"),
+  cityVerificationUrl: text("city_verification_url"),
+  cityVerificationStatus: text("city_verification_status"),
+  cityDriverId: text("city_driver_id"),
+  cityFirstName: text("city_first_name"),
+  cityLastName: text("city_last_name"),
+  cityLicenseNumbers: text("city_license_numbers"),
+  cityMedicalValid: boolean("city_medical_valid"),
+  cityPsychologicalValid: boolean("city_psychological_valid"),
+  verificationCheckedAt: timestamp("verification_checked_at"),
+  verificationError: text("verification_error"),
+});
+
+// Schema for initial driver registration (step 1 - basic data only)
+export const insertDriverSchema = createInsertSchema(drivers).pick({
+  username: true,
+  name: true,
+  firstName: true,
+  lastName: true,
+  phone: true,
+});
+
+// Schema for completing driver profile (step 2 - after login)
+export const completeDriverProfileSchema = createInsertSchema(drivers).pick({
+  phone: true,
+  vehiclePlate: true,
+  vehicleModel: true,
+  taxiLicenseNumber: true,
+});
+
+export type InsertDriver = z.infer<typeof insertDriverSchema>;
+export type Driver = typeof drivers.$inferSelect;
+
+// Subscription plans table (managed by admin)
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Nazwa planu: "Miesięczny", "Kwartalny", "Roczny"
+  durationDays: integer("duration_days").notNull(), // Czas trwania w dniach: 30, 90, 365
+  price: integer("price").notNull(), // Cena w groszach (np. 9900 = 99.00 PLN)
+  description: text("description"), // Opis planu
+  isActive: boolean("is_active").default(true), // Czy plan jest dostępny
+  isDefault: boolean("is_default").default(false), // Czy to domyślny plan
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).pick({
+  name: true,
+  durationDays: true,
+  price: true,
+  description: true,
+  isActive: true,
+  isDefault: true,
+});
+
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+// Push subscriptions table
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverId: varchar("driver_id").notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).pick({
+  driverId: true,
+  endpoint: true,
+  p256dh: true,
+  auth: true,
+});
+
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+// FCM tokens table (for native Capacitor apps)
+export const fcmTokens = pgTable("fcm_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userType: text("user_type").notNull(), // 'driver' | 'passenger'
+  token: text("token").notNull(),
+  platform: text("platform").notNull(), // 'android' | 'ios' | 'web'
+  lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFcmTokenSchema = createInsertSchema(fcmTokens).pick({
+  userId: true,
+  userType: true,
+  token: true,
+  platform: true,
+});
+
+export type InsertFcmToken = z.infer<typeof insertFcmTokenSchema>;
+export type FcmToken = typeof fcmTokens.$inferSelect;
+
+// Ride status values
+export const rideStatusValues = ["pending", "accepted", "in_progress", "completed", "cancelled"] as const;
+export type RideStatus = typeof rideStatusValues[number];
+
+// Rides table
+export const rides = pgTable("rides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  passengerId: varchar("passenger_id"),
+  driverId: varchar("driver_id"),
+  preferredDriverId: varchar("preferred_driver_id"),
+  driverRequestedAt: timestamp("driver_requested_at"),
+  pickupLocation: text("pickup_location").notNull(),
+  pickupLat: decimal("pickup_lat", { precision: 10, scale: 7 }),
+  pickupLng: decimal("pickup_lng", { precision: 10, scale: 7 }),
+  destination: text("destination").notNull(),
+  destLat: decimal("dest_lat", { precision: 10, scale: 7 }),
+  destLng: decimal("dest_lng", { precision: 10, scale: 7 }),
+  stops: jsonb("stops").$type<Array<{ address: string; lat: string; lng: string }>>().default([]),
+  passengerCount: integer("passenger_count").notNull().default(1),
+  status: text("status").notNull().default("pending"),
+  estimatedPrice: integer("estimated_price"),
+  finalPrice: integer("final_price"),
+  negotiatedPrice: integer("negotiated_price"),
+  citoPrice: integer("cito_price"),
+  distance: decimal("distance", { precision: 10, scale: 2 }),
+  isCito: boolean("is_cito").default(false),
+  scheduledAt: timestamp("scheduled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  // Real-time location tracking
+  driverCurrentLat: decimal("driver_current_lat", { precision: 10, scale: 7 }),
+  driverCurrentLng: decimal("driver_current_lng", { precision: 10, scale: 7 }),
+  driverLocationUpdatedAt: timestamp("driver_location_updated_at"),
+  passengerCurrentLat: decimal("passenger_current_lat", { precision: 10, scale: 7 }),
+  passengerCurrentLng: decimal("passenger_current_lng", { precision: 10, scale: 7 }),
+  passengerLocationUpdatedAt: timestamp("passenger_location_updated_at"),
+  // Phone order fields
+  orderSource: text("order_source").default("app"), // 'app', 'phone', 'business'
+  callerPhone: text("caller_phone"), // Phone number for phone orders
+  notes: text("notes"), // Internal notes (e.g., recording reference for transcription)
+  cancelReason: text("cancel_reason"), // Reason for cancellation (e.g., expired phone orders)
+  offerExpiresAt: timestamp("offer_expires_at"), // When the driver offer expires (90s timeout)
+  searchStartedAt: timestamp("search_started_at"), // When first driver search was initiated
+  driverNotificationCount: jsonb("driver_notification_count").$type<Record<string, number>>().default({}), // driverId -> notification count
+});
+
+export const insertRideSchema = createInsertSchema(rides).pick({
+  pickupLocation: true,
+  destination: true,
+  passengerCount: true,
+  pickupLat: true,
+  pickupLng: true,
+  destLat: true,
+  destLng: true,
+  stops: true,
+  isCito: true,
+  citoPrice: true,
+  scheduledAt: true,
+  preferredDriverId: true,
+  estimatedPrice: true,
+});
+
+export type InsertRide = z.infer<typeof insertRideSchema>;
+export type Ride = typeof rides.$inferSelect;
+
+// Schema for updating ride destination
+export const updateRideDestinationSchema = z.object({
+  destination: z.string().min(3, "Destination address required"),
+  destLat: z.string().refine((val) => !isNaN(parseFloat(val)), "Invalid latitude"),
+  destLng: z.string().refine((val) => !isNaN(parseFloat(val)), "Invalid longitude"),
+});
+export type UpdateRideDestination = z.infer<typeof updateRideDestinationSchema>;
+
+// Schema for adding a stop to a ride
+export const addRideStopSchema = z.object({
+  address: z.string().min(3, "Address is required"),
+  lat: z.string().refine((val) => !isNaN(parseFloat(val)), "Invalid latitude"),
+  lng: z.string().refine((val) => !isNaN(parseFloat(val)), "Invalid longitude"),
+});
+export type AddRideStop = z.infer<typeof addRideStopSchema>;
+
+// Messages table for chat
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rideId: varchar("ride_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  senderType: text("sender_type").notNull(), // 'passenger' or 'driver'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  isRead: boolean("is_read").default(false),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).pick({
+  rideId: true,
+  senderId: true,
+  senderType: true,
+  content: true,
+});
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+
+// Ratings table
+export const ratings = pgTable("ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rideId: varchar("ride_id").notNull(),
+  driverId: varchar("driver_id").notNull(),
+  passengerId: varchar("passenger_id"),
+  rating: integer("rating").notNull(), // 1-5
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRatingSchema = createInsertSchema(ratings).pick({
+  rideId: true,
+  driverId: true,
+  passengerId: true,
+  rating: true,
+  comment: true,
+});
+
+export type InsertRating = z.infer<typeof insertRatingSchema>;
+export type Rating = typeof ratings.$inferSelect;
+
+// Relations
+export const ridesRelations = relations(rides, ({ one, many }) => ({
+  driver: one(drivers, {
+    fields: [rides.driverId],
+    references: [drivers.id],
+  }),
+  passenger: one(users, {
+    fields: [rides.passengerId],
+    references: [users.id],
+  }),
+  messages: many(messages),
+  rating: one(ratings),
+}));
+
+export const driversRelations = relations(drivers, ({ many }) => ({
+  rides: many(rides),
+  ratings: many(ratings),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  ride: one(rides, {
+    fields: [messages.rideId],
+    references: [rides.id],
+  }),
+}));
+
+export const ratingsRelations = relations(ratings, ({ one }) => ({
+  ride: one(rides, {
+    fields: [ratings.rideId],
+    references: [rides.id],
+  }),
+  driver: one(drivers, {
+    fields: [ratings.driverId],
+    references: [drivers.id],
+  }),
+}));
+
+// Business companies (hotels, firms)
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  plainPassword: text("plain_password"), // Only for testing phase!
+  phone: text("phone"),
+  address: text("address"),
+  taxId: text("tax_id"), // NIP
+  type: text("type").notNull().default("hotel"), // 'hotel' or 'company'
+  isActive: boolean("is_active").default(true),
+  isOnline: boolean("is_online").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).pick({
+  name: true,
+  email: true,
+  password: true,
+  phone: true,
+  address: true,
+  taxId: true,
+  type: true,
+});
+
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Company = typeof companies.$inferSelect;
+
+// Business employees (hotel staff, company workers)
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  password: text("password").notNull(),
+  phone: text("phone"),
+  role: text("role").notNull().default("employee"), // 'admin' or 'employee'
+  isActive: boolean("is_active").default(true),
+  isOnline: boolean("is_online").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEmployeeSchema = createInsertSchema(employees).pick({
+  companyId: true,
+  name: true,
+  email: true,
+  password: true,
+  phone: true,
+  role: true,
+});
+
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type Employee = typeof employees.$inferSelect;
+
+// Business rides (rides ordered by companies)
+export const businessRides = pgTable("business_rides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull(),
+  employeeId: varchar("employee_id"),
+  rideId: varchar("ride_id").notNull(),
+  guestName: text("guest_name"),
+  guestPhone: text("guest_phone"),
+  roomNumber: text("room_number"),
+  costCenter: text("cost_center"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBusinessRideSchema = createInsertSchema(businessRides).pick({
+  companyId: true,
+  employeeId: true,
+  rideId: true,
+  guestName: true,
+  guestPhone: true,
+  roomNumber: true,
+  costCenter: true,
+  notes: true,
+});
+
+export type InsertBusinessRide = z.infer<typeof insertBusinessRideSchema>;
+export type BusinessRide = typeof businessRides.$inferSelect;
+
+// Invoices for companies
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  totalAmount: integer("total_amount").notNull().default(0),
+  rideCount: integer("ride_count").notNull().default(0),
+  status: text("status").notNull().default("pending"), // 'pending', 'paid', 'overdue'
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).pick({
+  companyId: true,
+  invoiceNumber: true,
+  periodStart: true,
+  periodEnd: true,
+  totalAmount: true,
+  rideCount: true,
+  status: true,
+  dueDate: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// Invoice items (rides in invoice)
+export const invoiceItems = pgTable("invoice_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull(),
+  businessRideId: varchar("business_ride_id").notNull(),
+  amount: integer("amount").notNull(),
+  description: text("description"),
+});
+
+export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).pick({
+  invoiceId: true,
+  businessRideId: true,
+  amount: true,
+  description: true,
+});
+
+export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
+export type InvoiceItem = typeof invoiceItems.$inferSelect;
+
+// Business relations
+export const companiesRelations = relations(companies, ({ many }) => ({
+  employees: many(employees),
+  businessRides: many(businessRides),
+  invoices: many(invoices),
+}));
+
+export const employeesRelations = relations(employees, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [employees.companyId],
+    references: [companies.id],
+  }),
+  businessRides: many(businessRides),
+}));
+
+export const businessRidesRelations = relations(businessRides, ({ one }) => ({
+  company: one(companies, {
+    fields: [businessRides.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [businessRides.employeeId],
+    references: [employees.id],
+  }),
+  ride: one(rides, {
+    fields: [businessRides.rideId],
+    references: [rides.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [invoices.companyId],
+    references: [companies.id],
+  }),
+  items: many(invoiceItems),
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+  businessRide: one(businessRides, {
+    fields: [invoiceItems.businessRideId],
+    references: [businessRides.id],
+  }),
+}));
+
+// Zod schemas for API responses
+export const rideSchema = z.object({
+  id: z.string(),
+  passengerId: z.string().nullable(),
+  driverId: z.string().nullable(),
+  pickupLocation: z.string(),
+  pickupLat: z.string().nullable(),
+  pickupLng: z.string().nullable(),
+  destination: z.string(),
+  destLat: z.string().nullable(),
+  destLng: z.string().nullable(),
+  passengerCount: z.number(),
+  status: z.enum(rideStatusValues),
+  estimatedPrice: z.number().nullable(),
+  finalPrice: z.number().nullable(),
+  distance: z.string().nullable(),
+  createdAt: z.date().nullable(),
+  acceptedAt: z.date().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
+});
+
+export const driverSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  phone: z.string(),
+  vehiclePlate: z.string(),
+  vehicleModel: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+  languages: z.array(z.string()).nullable(),
+  isOnline: z.boolean().nullable(),
+  rating: z.string().nullable(),
+  totalRides: z.number().nullable(),
+  totalEarnings: z.number().nullable(),
+  subscriptionStatus: z.enum(subscriptionStatusValues).nullable(),
+  trialEndsAt: z.date().nullable(),
+  subscriptionEndsAt: z.date().nullable(),
+  suspendedAt: z.date().nullable(),
+  suspendedUntil: z.date().nullable(),
+  remainingDays: z.number().nullable(),
+});
+
+export const messageSchema = z.object({
+  id: z.string(),
+  rideId: z.string(),
+  senderId: z.string(),
+  senderType: z.enum(["passenger", "driver"]),
+  content: z.string(),
+  createdAt: z.date().nullable(),
+  isRead: z.boolean().nullable(),
+});
+
+// System settings table for admin configuration
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: text("setting_key").notNull().unique(),
+  settingValue: text("setting_value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+
+// Payment requests table for subscription payments
+export const paymentRequests = pgTable("payment_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverId: varchar("driver_id").notNull(),
+  amount: integer("amount").notNull(),
+  planId: varchar("plan_id"),
+  planName: text("plan_name"),
+  durationDays: integer("duration_days"),
+  paymentMethod: text("payment_method").notNull(),
+  transactionId: text("transaction_id"),
+  status: text("status").default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by"),
+});
+
+export type PaymentRequest = typeof paymentRequests.$inferSelect;
+export type InsertPaymentRequest = typeof paymentRequests.$inferInsert;
+
+// Promotions table
+export const promotions = pgTable("promotions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  buttonText: text("button_text").default("Odbierz"),
+  buttonLink: text("button_link"),
+  isActive: boolean("is_active").default(true),
+  featured: boolean("featured").default(false),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const homeContent = pgTable("home_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  heroVideoUrl: text("hero_video_url").default(""),
+  heroHeadline: text("hero_headline").default(""),
+  liveMessage: text("live_message").default(""),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPromotionSchema = createInsertSchema(promotions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
+export type Promotion = typeof promotions.$inferSelect;
+
+// Referrals tracking table
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerDriverId: varchar("referrer_driver_id").notNull(), // Kierowca polecający
+  referredUserId: varchar("referred_user_id"), // Polecony pasażer (jeśli typ = passenger)
+  referredDriverId: varchar("referred_driver_id"), // Polecony kierowca (jeśli typ = driver)
+  referralType: text("referral_type").notNull(), // 'driver' lub 'passenger'
+  referralCode: text("referral_code").notNull(), // Użyty kod polecający
+  status: text("status").default("pending").notNull(), // pending / confirmed / rewarded
+  rewardGranted: boolean("reward_granted").default(false), // Czy nagroda została przyznana
+  rewardDescription: text("reward_description"), // Opis nagrody
+  createdAt: timestamp("created_at").defaultNow(),
+  confirmedAt: timestamp("confirmed_at"), // Kiedy polecenie zostało potwierdzone
+  rewardedAt: timestamp("rewarded_at"), // Kiedy nagroda została przyznana
+});
+
+export type Referral = typeof referrals.$inferSelect;
+
+// Referral payouts table - tracks payments to drivers for successful referrals
+export const referralPayouts = pgTable("referral_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referralId: varchar("referral_id").notNull(), // Powiązane polecenie
+  driverId: varchar("driver_id").notNull(), // Kierowca otrzymujący wypłatę
+  amount: integer("amount").notNull(), // Kwota w groszach
+  description: text("description"), // Opis wypłaty
+  bankAccountNumber: text("bank_account_number"), // Numer konta do wypłaty
+  bankAccountHolder: text("bank_account_holder"), // Właściciel konta
+  status: text("status").default("pending").notNull(), // pending / paid / cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  paidAt: timestamp("paid_at"), // Kiedy wypłacono
+  paidBy: varchar("paid_by"), // Admin który zatwierdził wypłatę
+  notes: text("notes"), // Uwagi admina
+});
+
+export type ReferralPayout = typeof referralPayouts.$inferSelect;
+
+// Ride status log - tracks every status transition for audit trail
+export const rideStatusLog = pgTable("ride_status_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rideId: varchar("ride_id").notNull(),
+  oldStatus: text("old_status").notNull(),
+  newStatus: text("new_status").notNull(),
+  actor: text("actor").notNull(),
+  actorId: varchar("actor_id"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type RideStatusLog = typeof rideStatusLog.$inferSelect;
+
+// Favorite drivers - passengers can mark drivers as favorites for priority matching
+export const favoriteDrivers = pgTable("favorite_drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  passengerId: varchar("passenger_id").notNull().references(() => users.id),
+  driverId: varchar("driver_id").notNull().references(() => drivers.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type FavoriteDriver = typeof favoriteDrivers.$inferSelect;
+
+// System messages - admin-targeted messages to drivers/passengers
+export const systemMessages = pgTable("system_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  targetRole: varchar("target_role", { length: 20 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  deliveryMode: varchar("delivery_mode", { length: 20 }).notNull().default("INBOX"),
+  requireAcknowledgement: boolean("require_acknowledgement").default(false),
+  forceOnLogin: boolean("force_on_login").default(false),
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  createdByAdminId: varchar("created_by_admin_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  version: integer("version").default(1),
+  parentMessageId: varchar("parent_message_id"),
+});
+
+export type SystemMessage = typeof systemMessages.$inferSelect;
+export const insertSystemMessageSchema = createInsertSchema(systemMessages).omit({
+  id: true,
+  createdAt: true,
+  version: true,
+  parentMessageId: true,
+  isActive: true,
+});
+
+// User message reads - tracks which users read/acknowledged messages
+export const userMessageReads = pgTable("user_message_reads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userRole: varchar("user_role", { length: 20 }).notNull(),
+  messageId: varchar("message_id").notNull(),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+});
+
+export type UserMessageRead = typeof userMessageReads.$inferSelect;
+
+// Valid status transitions map
+export const validStatusTransitions: Record<string, string[]> = {
+  pending: ["accepted", "cancelled"],
+  accepted: ["in_progress", "pending", "cancelled"],
+  in_progress: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+// Re-export Replit Auth models
+export * from "./models/auth";

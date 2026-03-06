@@ -1,0 +1,175 @@
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  ShieldOff, Clock, AlertTriangle, CheckCircle2, X, Eye, Loader2, Search, Ban,
+  Car, User, History, CreditCard, Mail, Camera, List, Star, Power, Menu,
+  LogOut, DollarSign, Share2, Phone, MapPin, Navigation, Users, Bell, BellOff,
+  WifiOff, ArrowLeft, Copy, QrCode, Download, Send, Banknote, Pencil, XCircle
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, 
+  DropdownMenuSeparator, DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Helmet } from "react-helmet";
+
+// Mock/Simplified components to keep it working
+const RequiredMessagesModal = () => null;
+const PricingManager = ({ driverId, onClose }: any) => null;
+const RideCard = ({ ride, driverId, onAccept, onStart, onComplete, onRelease, onOpenChat, onOpenNav, isPending }: any) => null;
+const QRCodeDisplay = ({ value, size }: any) => <div className="bg-gray-200" style={{ width: size, height: size }} />;
+
+export default function DriverDashboard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("available");
+  const [showPricing, setShowPricing] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
+  const driver = user?.driver;
+  const driverId = driver?.id;
+
+  const { data: verificationStatus } = useQuery({
+    queryKey: ["/api/driver/verification-status"],
+    enabled: !!driverId,
+  });
+
+  const uploadIdCardMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("idCard", file);
+      const res = await fetch("/api/driver/upload-id-card", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Błąd przesyłania");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/driver/verification-status"] });
+      toast({ title: "Sukces", description: "Dokument przesłany do weryfikacji" });
+    },
+    onError: () => {
+      toast({ title: "Błąd", description: "Nie udało się przesłać dokumentu", variant: "destructive" });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async (isOnline: boolean) => {
+      const res = await apiRequest("PATCH", `/api/drivers/${driverId}/status`, { isOnline });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  });
+
+  const isOnline = driver?.isOnline || false;
+
+  if (!user) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Car className="text-primary" />
+          <span className="font-bold">TaxiQ Kierowca</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (driver?.verificationStatus !== "approved") {
+                toast({
+                  title: "Weryfikacja wymagana",
+                  description: "Twój profil musi zostać zatwierdzony przez administratora. Prześlij skan dowodu w zakładce Profil.",
+                  variant: "destructive",
+                });
+                return;
+              }
+              statusMutation.mutate(!isOnline);
+            }}
+            className={`px-3 py-1 rounded text-xs font-bold ${isOnline ? "bg-primary text-black" : "bg-muted"}`}
+          >
+            {isOnline ? "ONLINE" : "OFFLINE"}
+          </button>
+        </div>
+      </header>
+
+      <main className="p-4 flex-1 overflow-y-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="available">Giełda</TabsTrigger>
+            <TabsTrigger value="active">Aktywne</TabsTrigger>
+            <TabsTrigger value="profile">Profil</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="space-y-4">
+            <Card>
+              <CardHeader><CardTitle>Weryfikacja tożsamości</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Prześlij zdjęcie dowodu osobistego, aby administrator mógł zatwierdzić Twój profil.
+                </p>
+                {driver?.idCardImageUrl ? (
+                  <div className="space-y-2">
+                    <Badge variant="outline" className="text-green-500 border-green-500">
+                      <CheckCircle2 className="w-3 h-3 mr-1" /> Dokument przesłany
+                    </Badge>
+                    <img src={driver.idCardImageUrl} className="w-full rounded border h-40 object-contain bg-black" alt="Dowód" />
+                  </div>
+                ) : (
+                  <Button 
+                    className="w-full" 
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) uploadIdCardMutation.mutate(file);
+                      };
+                      input.click();
+                    }}
+                    disabled={uploadIdCardMutation.isPending}
+                  >
+                    {uploadIdCardMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2" />}
+                    Prześlij skan dowodu
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Dane podstawowe</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Imię</Label>
+                    <Input value={firstName} onChange={e => setFirstName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nazwisko</Label>
+                    <Input value={lastName} onChange={e => setLastName(e.target.value)} />
+                  </div>
+                </div>
+                <Button className="w-full">Zapisz zmiany</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}

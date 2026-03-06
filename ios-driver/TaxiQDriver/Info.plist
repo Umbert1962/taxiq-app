@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>pl</string>
+	<key>CFBundleDisplayName</key>
+	<string>TaxiQ Driver</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+		<string>location-services</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>remote-notification</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TaxiQ Driver potrzebuje dostępu do Twojej lokalizacji, aby pasażerowie mogli śledzić nadjeżdżającą taksówkę na mapie.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>TaxiQ Driver potrzebuje ciągłego dostępu do lokalizacji, aby pasażerowie mogli śledzić Twoją pozycję w czasie rzeczywistym, nawet gdy aplikacja działa w tle podczas kursu.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>TaxiQ Driver potrzebuje ciągłego dostępu do lokalizacji, aby śledzić pozycję taksówki podczas kursu.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TaxiQ Driver potrzebuje dostępu do aparatu, aby zrobić zdjęcie profilowe i sfotografować legitymację taxi.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>
