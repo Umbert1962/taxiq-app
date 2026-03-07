@@ -1,0 +1,2 @@
+rootProject.name = "TaxiQ Driver"
+include ':app'

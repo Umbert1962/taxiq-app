@@ -1,0 +1,2 @@
+id,name,email,password,plain_password,phone,address,tax_id,type,is_active,is_online,created_at
+cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,GlobeTrotter,rzamelczyk@icloud.com,$2b$10$Llb23FWQJj8WM2YfZDYcb.RI0rCha/XvEC9RXBZal9eGkmsIb2IVi,$2b$10$Llb23FWQJj8WM2YfZDYcb.RI0rCha/XvEC9RXBZal9eGkmsIb2IVi,729317371,"60-823 Poznań, Slowackiego 30",6981032125,company,t,t,2026-02-27 04:34:05.318111

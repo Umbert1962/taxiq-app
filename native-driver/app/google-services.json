@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "885201453786",
+    "project_id": "taxiq-7d0e7",
+    "storage_bucket": "taxiq-7d0e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:885201453786:android:c4155792520af093c89be3",
+        "android_client_info": {
+          "package_name": "pl.taxiq.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATfmpHyQ--cZlJyhLJNuxN12awlQbm20E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:885201453786:android:4308b35a0dd65985c89be3",
+        "android_client_info": {
+          "package_name": "pl.taxiq.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATfmpHyQ--cZlJyhLJNuxN12awlQbm20E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

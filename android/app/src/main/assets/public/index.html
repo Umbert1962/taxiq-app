@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>TaxiQ - Szybka i wygodna taksówka</title>
+    <meta name="description" content="TaxiQ - Zamów taksówkę w kilka sekund. Szybko, wygodnie i bezpiecznie." />
+    <meta name="theme-color" content="#0d0d0d" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-Cbx-b7vY.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dvkwgto1.css">
+  </head>
+  <body class="dark">
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(reg) {
+            if (reg.active && reg.active.scriptURL && reg.active.scriptURL.includes('sw.js') && !reg.active.scriptURL.includes('push-sw.js')) {
+              reg.unregister().then(function() {
+                console.log('[TaxiQ] Old PWA service worker removed');
+              });
+            }
+          });
+        });
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) { caches.delete(name); });
+          });
+        }
+        navigator.serviceWorker.register('/push-sw.js').then(function() {
+          console.log('[TaxiQ] Push notification service worker registered');
+        }).catch(function(err) {
+          console.log('[TaxiQ] Push SW registration skipped:', err.message);
+        });
+      }
+    </script>
+  </body>
+</html>

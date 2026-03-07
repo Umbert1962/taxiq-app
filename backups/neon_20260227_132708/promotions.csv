@@ -1,0 +1,4 @@
+id,title,description,image_url,button_text,button_link,is_active,featured,sort_order,created_at
+0852c24e-7a62-49f5-a459-dc224d74deed,Darmowy kurs dla kierowcy,Dołącz jako kierowca i przetestuj platformę — pierwszy miesiąc bez opłat.,,Dołącz,/driver,t,f,2,2026-02-07 17:05:46.023
+a63007f5-bec4-46cd-9fcc-1e4bb90cf0fd,Polecaj i zarabiaj,Poleć TaxiQ znajomemu i odbierz 5 zł zniżki na każdy polecony kurs.,,Sprawdź,,t,f,3,2026-02-07 17:05:46.023
+75502b94-d8aa-469d-b78b-df00fd2514d8,10 zł taniej na pierwszy kurs,Zarejestruj się jako nowy pasażer i otrzymaj rabat 10 zł na pierwszą podróż z TaxiQ.,,Odbierz,/passenger,t,t,1,2026-02-07 17:05:46.023

@@ -1,0 +1,6 @@
+id,company_id,employee_id,ride_id,guest_name,guest_phone,room_number,cost_center,notes,created_at
+6cd65fa8-4d41-4ecb-b3df-3ba672ebe466,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,,e1e84fb1-9ac0-4ef2-9280-e661bf4afd2c,"","","","","Prosze zatrzymac sie na postoju obok firmy. Pasazer dotrze. Prosze czekac dop sklutku z włączonym, taksometrem",2026-02-27 04:38:27.435352
+b586c4f8-4b9b-4a2c-a6eb-9da5a493b098,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,,645ef543-a1a6-4aff-937f-1b907048dbe9,Tomasz ch,721317371,105,"",zaczekaj pod hotelem,2026-02-27 10:49:09.767956
+67391952-6dd4-4185-af5c-88eeb1a1165d,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,,e9b50a19-975c-4f49-8751-29e7651774e3,Jan Kowalczyk,600600600,102,"",czekac do skutku,2026-02-27 11:48:52.831784
+96165182-bd74-4cb6-863e-e2af31ae6458,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,,a7eb5203-940e-4d38-bb60-20f9b9c42e6d,"","","","","",2026-02-27 12:30:01.199651
+af1d0191-dfd7-4d62-8cb8-b5411f933988,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,,45b18c91-b7aa-49fe-90ae-068f5268832b,"","","","","",2026-02-27 12:49:49.353283

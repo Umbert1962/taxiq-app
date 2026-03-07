@@ -1,0 +1,5 @@
+id,name,duration_days,price,description,is_active,is_default,created_at,updated_at
+041c90f6-ed4a-4851-ba86-c0fa8523ce04,Kwartalny,90,99900,Abonament kwartalny (90 dni) - oszczędzasz 10%,t,f,2026-01-31 21:16:56.991,2026-01-31 21:16:56.991
+297f9659-d647-4a8c-a3ce-acc7856f94da,Testowy,7,0,Abonament testowy (0 PLN) - do testów płatności,t,f,2026-01-31 21:16:56.991,2026-01-31 21:16:56.991
+51bbe450-cef4-49aa-99ee-803e0cd82dc6,Tygodniowy,7,9900,Plan tygodniowy,t,f,2026-01-31 21:23:27.258,2026-01-31 21:23:27.258
+a92e7a4c-3418-4325-a284-9bd9955a9633,Plan podstawowy,30,36900,Podstawowy plan abonamentowy,t,t,2026-01-31 21:16:56.991,2026-01-31 21:16:56.991

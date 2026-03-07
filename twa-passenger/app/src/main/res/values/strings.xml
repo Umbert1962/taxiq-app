@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TaxiQ Passenger</string>
+    <string name="fallback_custom_tab">customtabs</string>
+</resources>

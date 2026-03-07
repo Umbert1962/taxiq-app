@@ -1,0 +1,67 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.com.taxiq.driver",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.com.taxiq.twa",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA",
+        "4F:36:12:E8:C2:09:98:D7:28:D0:46:70:41:3E:F4:F4:9C:1A:70:82:5D:2C:E9:D0:14:28:F8:1C:A7:7E:F0:24"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.taxiq.passenger",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA",
+        "4F:36:12:E8:C2:09:98:D7:28:D0:46:70:41:3E:F4:F4:9C:1A:70:82:5D:2C:E9:D0:14:28:F8:1C:A7:7E:F0:24"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.taxiq.driver",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA",
+        "4F:36:12:E8:C2:09:98:D7:28:D0:46:70:41:3E:F4:F4:9C:1A:70:82:5D:2C:E9:D0:14:28:F8:1C:A7:7E:F0:24"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.taxiq.admin",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA",
+        "4F:36:12:E8:C2:09:98:D7:28:D0:46:70:41:3E:F4:F4:9C:1A:70:82:5D:2C:E9:D0:14:28:F8:1C:A7:7E:F0:24"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.taxiq.business",
+      "sha256_cert_fingerprints": [
+        "05:BA:DF:93:73:66:81:97:CD:8D:40:42:90:1B:D9:CF:F1:67:FF:D8:4C:5F:EC:01:B5:A8:72:B5:0C:C3:4C:FA",
+        "4F:36:12:E8:C2:09:98:D7:28:D0:46:70:41:3E:F4:F4:9C:1A:70:82:5D:2C:E9:D0:14:28:F8:1C:A7:7E:F0:24"
+      ]
+    }
+  }
+]

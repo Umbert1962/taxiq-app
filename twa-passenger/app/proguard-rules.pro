@@ -1,0 +1,6 @@
+-keep class com.google.androidbrowserhelper.** { *; }
+-keep class androidx.browser.** { *; }
+-keep class androidx.appcompat.** { *; }
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.androidbrowserhelper.**
+-dontwarn androidx.browser.**

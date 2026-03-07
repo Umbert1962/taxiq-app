@@ -1,0 +1,4 @@
+id,title,content,target_role,type,delivery_mode,require_acknowledgement,force_on_login,is_active,expires_at,created_by_admin_id,created_at,version,parent_message_id
+a93400f3-fe9d-482d-bdbb-cb0db237aed6,Dzień dobry,No to zaczynamy drodzy Państwo.,DRIVER,INFO,INBOX,t,t,t,2026-02-25 00:00:00,21c53489-808a-4f1f-9a80-f38db50fd57a,2026-02-24 13:12:28.681592,1,
+ed435c17-374a-443c-ae42-ee25a23107f0,Dzień doberek!,I tutaj zaczynamy również!,PASSENGER,INFO,INBOX,t,t,t,,21c53489-808a-4f1f-9a80-f38db50fd57a,2026-02-24 13:14:11.383219,1,
+fc211a8c-1924-4b92-a505-5d31353745ca,Dzień dobry o poranku,To dobry poranku dzień dobry!,ALL,INFO,INBOX,f,f,t,2026-02-27 00:00:00,21c53489-808a-4f1f-9a80-f38db50fd57a,2026-02-26 07:32:42.998528,1,

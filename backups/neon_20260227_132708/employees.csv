@@ -1,0 +1,3 @@
+id,company_id,name,email,password,phone,role,is_active,is_online,created_at
+75efdcd4-7593-44ad-bf1d-bbcade1f4d3a,4fa72a02-6233-4e20-8fc4-071175faee3e,Anna Nowak NDJ,anna_l_KwjF@hotel.com,$2b$10$5rH7yv60PFFVEWRux/fwvev5r6eSQqEfW3Pt5J2doXE.b1xbONpPG,+48 601 234 567,employee,t,f,2026-01-23 11:28:11.913
+ddf599eb-4ad3-4056-9fd5-2d5efdb4a322,cd2bc7c3-6a6d-4cce-a758-92f12ab07e45,Robert Zamelczyk,rzamelczyk@icloud.com,$2b$10$usSL1c2p3cupeXn9ydxtJeLmlRhHXDthIIKI2Fw0JhkBsC8Q.fBhC,729317371,employee,t,t,2026-02-27 04:34:28.0657

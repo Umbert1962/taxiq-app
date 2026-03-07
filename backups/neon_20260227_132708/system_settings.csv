@@ -1,0 +1,7 @@
+id,setting_key,setting_value,description,updated_at
+2e5b809b-7873-4c97-9272-febda497c828,payment_bank_account,76291000060000000003294101,Numer konta bankowego do wpłat,2026-02-24 13:18:56.834
+f7c78da3-9a70-4b8b-b6ca-550ef641eda2,payment_blik_phone,729317371,Numer telefonu do płatności BLIK,2026-02-24 13:18:57.065
+b716e595-10cf-4046-a0ab-95acbda87d6e,payment_recipient_name,GlobeTrotter,Nazwa odbiorcy płatności,2026-02-24 13:18:57.294
+052bcf1e-0f03-4278-97cf-94f3b503b432,systemMessage,Twoje taxi — bez pośredników — bez korporacji — bez prowizji — proste zasady — uczciwe ceny — jedź z nami!,System message banner text,2026-02-26 07:39:03.892
+8d1434ef-8f6c-4bfe-b6a9-cf6f5e07bd7a,systemMessagePriority,important,System message banner priority,2026-02-26 07:39:04.519
+e9f8f690-d5d8-46a6-ada7-4bfb5231fe4d,systemMessageActive,true,System message banner active,2026-02-26 07:47:50.966

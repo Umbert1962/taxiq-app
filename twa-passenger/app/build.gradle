@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'pl.taxiq.passenger'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "pl.taxiq.passenger"
+        minSdk 21
+        targetSdk 35
+        versionCode 15
+        versionName "1.0.14"
+
+        manifestPlaceholders = [
+            hostName: "taxiq.com.pl",
+            defaultUrl: "https://taxiq.com.pl/passenger",
+            launcherName: "TaxiQ Passenger",
+            assetStatements: '[{ "relation": ["delegate_permission/common.handle_all_urls"], "target": { "namespace": "web", "site": "https://taxiq.com.pl" } }]'
+        ]
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('passenger-signing.keystore')
+            storePassword '6lUjyAXANNQW'
+            keyAlias 'my-key-alias'
+            keyPassword '6lUjyAXANNQW'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.browser:browser:1.7.0'
+}

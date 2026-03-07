@@ -1,0 +1,2 @@
+id,username,password,plain_password,name,email,role,created_at,phone,pin_hash,pin_set_at,otp_hash,otp_expires_at,otp_attempts,pin_attempts,pin_locked_until
+21c53489-808a-4f1f-9a80-f38db50fd57a,Robert,$2b$10$i4mO.gIgQXHvqg1VT6rDwe.S26G01pb1MN1CXN9X57SM5VNrYZwU.,,Robert,,superadmin,2026-02-10 07:27:39.59,+48729317371,$2b$10$qa.E0FIyH2osqmi8SAgZG.9jm/0DgWZ9yyW9bFWYcsC8mdxGAxIDC,2026-02-19 08:43:47.011,,,0,0,
