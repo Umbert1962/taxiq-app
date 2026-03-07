@@ -10,14 +10,12 @@
 		AA000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000010; };
 		AA000002 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000011; };
 		AA000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000012; };
-		AA000004 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA000013; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		AA000010 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA000011 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		AA000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		AA000013 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		AA000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA000020 /* TaxiQPassenger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaxiQPassenger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -37,7 +35,6 @@
 				AA000010,
 				AA000011,
 				AA000012,
-				AA000013,
 				AA000014,
 			);
 			path = TaxiQPassenger;
@@ -78,8 +75,8 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
 			};
 			buildConfigurationList = AA000051;
 			compatibilityVersion = "Xcode 14.0";
@@ -105,7 +102,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000003,
-				AA000004,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
