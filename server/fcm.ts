@@ -37,12 +37,21 @@ interface FCMPayload {
   title: string;
   body: string;
   data?: Record<string, string>;
+  imageUrl?: string;
+}
+
+interface FCMDebugContext {
+  driverId?: string;
+  eventType?: string;
+  platforms?: string[];
 }
 
 export async function sendFCMNotification(
   tokens: string[],
   payload: FCMPayload,
-  highPriority: boolean = false
+  highPriority: boolean = false,
+  androidChannelId?: string,
+  debug?: FCMDebugContext
 ): Promise<{ success: number; failure: number; expiredTokens: string[] }> {
   if (!fcmInitialized) {
     console.log("[FCM] Not initialized, skipping FCM send");
@@ -57,81 +66,80 @@ export async function sendFCMNotification(
   let successCount = 0;
   let failureCount = 0;
 
-  const message: admin.messaging.MulticastMessage = {
-    tokens,
-    notification: {
-      title: payload.title,
-      body: payload.body,
-    },
-    data: payload.data || {},
-    android: {
-      priority: highPriority ? "high" : "normal",
-      notification: {
-        channelId: highPriority ? "ride_requests" : "default",
-        priority: highPriority ? "max" : "default",
-        sound: "default",
-        vibrateTimingsMillis: highPriority ? [0, 500, 200, 500, 200, 500] : [0, 250, 250, 250],
-        visibility: "public",
-        defaultVibrateTimings: false,
-        defaultSound: true,
-      },
-    },
-    apns: {
-      headers: {
-        "apns-priority": highPriority ? "10" : "5",
-      },
-      payload: {
-        aps: {
-          alert: {
-            title: payload.title,
-            body: payload.body,
-          },
-          sound: "default",
-          "content-available": 1,
-          "mutable-content": 1,
-          ...(highPriority ? { "interruption-level": "time-sensitive" } : {}),
-        },
-      },
-    },
-    webpush: {
-      headers: {
-        Urgency: highPriority ? "high" : "normal",
-      },
-      notification: {
+  const driverTag = debug?.driverId ? `driver=${debug.driverId}, ` : '';
+  const eventTag = debug?.eventType ? `eventType=${debug.eventType}, ` : '';
+
+  for (let idx = 0; idx < tokens.length; idx++) {
+    const token = tokens[idx];
+    const platform = debug?.platforms?.[idx] || 'unknown';
+    const maskedToken = token.substring(0, 20) + '...';
+
+    const singleMessage: admin.messaging.Message = {
+      token,
+      data: {
+        ...(payload.data || {}),
         title: payload.title,
         body: payload.body,
-        requireInteraction: highPriority,
-        vibrate: highPriority ? [500, 200, 500, 200, 500] : [200, 100, 200],
       },
-    },
-  };
+      android: {
+        priority: "high",
+        ttl: 30000,
+        notification: {
+          channelId: androidChannelId,
+        },
+      },
+      apns: {
+        headers: {
+          "apns-priority": highPriority ? "10" : "5",
+          "apns-push-type": "alert",
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: payload.title,
+              body: payload.body,
+            },
+            sound: "default",
+            "content-available": 1,
+            "mutable-content": 1,
+            ...(highPriority ? { "interruption-level": "time-sensitive" } : {}),
+          },
+        },
+        ...(payload.imageUrl ? { fcmOptions: { image: payload.imageUrl } } : {}),
+      },
+      webpush: {
+        headers: {
+          Urgency: highPriority ? "high" : "normal",
+        },
+        notification: {
+          title: payload.title,
+          body: payload.body,
+          requireInteraction: highPriority,
+          vibrate: highPriority ? [500, 200, 500, 200, 500] : [200, 100, 200],
+        },
+      },
+    };
 
-  try {
-    const response = await admin.messaging().sendEachForMulticast(message);
-    
-    console.log(`[FCM_RESULT] success=${response.successCount}, failure=${response.failureCount}`);
-    
-    successCount = response.successCount;
-    failureCount = response.failureCount;
+    console.log(`[PUSH_TOKEN_SEND_BEGIN] ${driverTag}${eventTag}platform=${platform}, token=${maskedToken}`);
 
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success && resp.error) {
-        const errorCode = resp.error.code;
-        if (
-          errorCode === "messaging/invalid-registration-token" ||
-          errorCode === "messaging/registration-token-not-registered"
-        ) {
-          expiredTokens.push(tokens[idx]);
-          console.log(`[FCM_EXPIRED] token=${tokens[idx].substring(0, 20)}...`);
-        } else {
-          console.error(`[FCM_ERROR] token=${tokens[idx].substring(0, 20)}..., error=${errorCode}: ${resp.error.message}`);
-        }
+    try {
+      const messageId = await admin.messaging().send(singleMessage);
+      successCount++;
+      console.log(`[PUSH_TOKEN_SEND_OK] ${driverTag}${eventTag}platform=${platform}, token=${maskedToken}, messageId=${messageId}`);
+    } catch (error: any) {
+      failureCount++;
+      const errorCode = error.code || 'unknown_code';
+      if (
+        errorCode === "messaging/invalid-registration-token" ||
+        errorCode === "messaging/registration-token-not-registered"
+      ) {
+        expiredTokens.push(token);
       }
-    });
-  } catch (error: any) {
-    console.error(`[FCM_SEND_ERROR] ${error.message}`);
-    failureCount = tokens.length;
+      console.error(`[PUSH_TOKEN_SEND_ERR] ${driverTag}${eventTag}platform=${platform}, token=${maskedToken}, code=${errorCode}, msg=${error.message}, stack=${error.stack}`);
+    }
   }
+
+  console.log(`[PUSH_DISPATCH_DONE] ${driverTag}${eventTag}sent=${successCount}, failed=${failureCount}, expired=${expiredTokens.length}`);
 
   return { success: successCount, failure: failureCount, expiredTokens };
 }
